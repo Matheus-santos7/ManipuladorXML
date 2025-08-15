@@ -1,0 +1,45 @@
+{
+  "caminhos": {
+    "pasta_origem": "/Users/apple/Documents/NerusO2/ATLAS/SP - cópia",
+    "pasta_edicao": "/Users/apple/Documents/NerusO2/ATLAS/SP - cópia"
+  },
+  "configuracao_execucao": {
+    "processar_e_renomear": true,
+    "editar_arquivos": true
+  },
+  "emitente": {
+    "CNPJ": "78242849000169",
+    "xNome": "ATLAS LTDA",
+    "xLgr": "Rodovia Br-158",
+    "nro": "S/N",
+    "xCpl": "Nao consta",
+    "xBairro": "Industrial",
+    "xMun": "Pato Branco",
+    "UF": "PR",
+    "fone": "4732812000"
+  },
+  "produto": {
+    "xProd": "300002011",
+    "cEAN": "7897180599911",
+    "cProd": "COOKTOP 5 BOCAS ATLAS AGILE UP PRETO"
+  },
+  "impostos": {
+    "pFCP": "2.00",
+    "pICMS": "18.00",
+    "pICMSUFDest": "12.00",
+    "pICMSInter": "7.00",
+    "pPIS": "1.65",
+    "pCOFINS": "7.60",
+    "pIPI": "5.00"
+  },
+  "data": {
+    "nova_data": "15/08/2025"
+  },
+  "alterar": {
+    "emitente": true,
+    "produtos": true,
+    "impostos": false,
+    "data": true,
+    "refNFe": true
+  }
+}
