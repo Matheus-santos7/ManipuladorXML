@@ -1,45 +1,92 @@
 {
-  "caminhos": {
-    "pasta_origem": "/Users/apple/Documents/NerusO2/ATLAS/SP - cópia",
-    "pasta_edicao": "/Users/apple/Documents/NerusO2/ATLAS/SP - cópia"
+  "ATLAS": {
+    "caminhos": {
+      "pasta_origem": "/Users/apple/Documents/NerusO2/ITATIAIA/Cenario 1",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/ITATIAIA/Cenario 1"
+    },
+    "configuracao_execucao": {
+      "processar_e_renomear": true,
+      "editar_arquivos": true
+    },
+    "emitente": {
+      "CNPJ": "78242849000169",
+      "xNome": "ATLAS LTDA",
+      "xLgr": "Rodovia Br-158",
+      "nro": "S/N",
+      "xCpl": "Nao consta",
+      "xBairro": "Industrial",
+      "xMun": "Pato Branco",
+      "UF": "PR",
+      "fone": "4732812000"
+    },
+    "produto": {
+      "xProd": "COOKTOP 5 BOCAS ATLAS AGILE UP PRETO",
+      "cEAN": "7897180599911",
+      "cProd": "300002011"
+    },
+    "impostos": {
+      "pFCP": "2.00",
+      "pICMS": "18.00",
+      "pICMSUFDest": "12.00",
+      "pICMSInter": "7.00",
+      "pPIS": "1.65",
+      "pCOFINS": "7.60",
+      "pIPI": "5.00"
+    },
+    "data": {
+      "nova_data": "15/08/2025"
+    },
+    "alterar": {
+      "emitente": true,
+      "produtos": true,
+      "impostos": false,
+      "data": true,
+      "refNFe": true
+    }
   },
-  "configuracao_execucao": {
-    "processar_e_renomear": true,
-    "editar_arquivos": true
-  },
-  "emitente": {
-    "CNPJ": "78242849000169",
-    "xNome": "ATLAS LTDA",
-    "xLgr": "Rodovia Br-158",
-    "nro": "S/N",
-    "xCpl": "Nao consta",
-    "xBairro": "Industrial",
-    "xMun": "Pato Branco",
-    "UF": "PR",
-    "fone": "4732812000"
-  },
-  "produto": {
-    "xProd": "300002011",
-    "cEAN": "7897180599911",
-    "cProd": "COOKTOP 5 BOCAS ATLAS AGILE UP PRETO"
-  },
-  "impostos": {
-    "pFCP": "2.00",
-    "pICMS": "18.00",
-    "pICMSUFDest": "12.00",
-    "pICMSInter": "7.00",
-    "pPIS": "1.65",
-    "pCOFINS": "7.60",
-    "pIPI": "5.00"
-  },
-  "data": {
-    "nova_data": "15/08/2025"
-  },
-  "alterar": {
-    "emitente": true,
-    "produtos": true,
-    "impostos": false,
-    "data": true,
-    "refNFe": true
+  "ITATIAIA": {
+    "caminhos": {
+      "pasta_origem": "/Users/apple/Documents/NerusO2/ITATIAIA/Cenario 1",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/ITATIAIA/Cenario 1"
+    },
+    "configuracao_execucao": {
+      "processar_e_renomear": true,
+      "editar_arquivos": true
+    },
+    "emitente": {
+      "CNPJ": "46334135000194",
+      "xNome": "ITATIAIA LTDA",
+      "xLgr": "ROD BR 101",
+      "nro": "S/N",
+      "xCpl": "Nao consta",
+      "xBairro": "FAZENDA SAO ROQUE",
+      "xMun": "Sooretama",
+      "UF": "ES",
+      "fone": "4732812000"
+    },
+    "produto": {
+      "xProd": "Air Fryer 3,5 litros 220 V Essencial - Itatiaia",
+      "cEAN": "7892946455166",
+      "cProd": "AFITA1001"
+    },
+    "impostos": {
+      "pFCP": "2.00",
+      "pICMS": "18.00",
+      "pICMSUFDest": "12.00",
+      "pICMSInter": "7.00",
+      "pPIS": "1.65",
+      "pCOFINS": "7.60",
+      "pIPI": "5.00"
+    },
+    "data": {
+      "nova_data": "02/07/2025"
+    },
+    "alterar": {
+      "emitente": true,
+      "produtos": true,
+      "impostos": false,
+      "data": true,
+      "refNFe": true
+    }
   }
 }
