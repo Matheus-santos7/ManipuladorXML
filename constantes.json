@@ -1,8 +1,8 @@
 {
   "ATLAS": {
     "caminhos": {
-      "pasta_origem": "itatiaia_test",
-      "pasta_edicao": "itatiaia_test"
+      "pasta_origem": "/Users/apple/Documents/NerusO2/ATLAS/Cenario 1",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/ATLAS/Cenario 1"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
@@ -41,7 +41,28 @@
       "produtos": true,
       "impostos": false,
       "data": true,
-      "refNFe": true
+      "refNFe": true,
+      "cst": true
+    },
+    "mapeamento_cst": {
+      "6105": {
+        "ICMS": "00",
+        "IPI": "50",
+        "PIS": "01",
+        "COFINS": "01"
+      },
+      "5949": {
+        "ICMS": "00",
+        "IPI": "55",
+        "PIS": "09",
+        "COFINS": "09"
+      },
+      "1949": {
+        "ICMS": "00",
+        "IPI": "55",
+        "PIS": "01",
+        "COFINS": "01"
+      }
     }
   },
   "ITATIAIA": {
@@ -86,7 +107,28 @@
       "produtos": true,
       "impostos": false,
       "data": true,
-      "refNFe": true
+      "refNFe": true,
+      "cst": true
+    },
+    "mapeamento_cst": {
+      "6105": {
+        "ICMS": "00",
+        "IPI": "50",
+        "PIS": "01",
+        "COFINS": "01"
+      },
+      "5949": {
+        "ICMS": "00",
+        "IPI": "55",
+        "PIS": "09",
+        "COFINS": "09"
+      },
+      "1949": {
+        "ICMS": "00",
+        "IPI": "55",
+        "PIS": "09",
+        "COFINS": "09"
+      }
     }
   }
 }

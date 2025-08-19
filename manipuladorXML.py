@@ -240,10 +240,13 @@ def editar_arquivos(folder_path, constantes_empresa):
     alterar_impostos = cfg.get('impostos', False)
     alterar_data = cfg.get('data', False)
     alterar_ref_nfe = cfg.get('refNFe', False)
+    alterar_cst = cfg.get('cst', False)  # --- NOVO ---
+
     novo_emitente = constantes_empresa.get('emitente')
     novo_produto = constantes_empresa.get('produto')
     novos_impostos = constantes_empresa.get('impostos')
     nova_data_str = constantes_empresa.get('data', {}).get('nova_data')
+    mapeamento_cst = constantes_empresa.get('mapeamento_cst', {})  # --- NOVO ---
 
     chave_mapping, reference_map = {}, {}
     all_nfe_infos = [get_xml_info(f) for f in arquivos]; all_nfe_infos = [info for info in all_nfe_infos if info]
@@ -273,26 +276,15 @@ def editar_arquivos(folder_path, constantes_empresa):
 
             # Inutilização
             if root.tag.endswith('procInutNFe'):
-                # Este bloco pode precisar de um tratamento de salvamento similar se também tiver problemas de formato.
-                # Por enquanto, mantido como estava.
-                # ... (bloco de Inutilização continua o mesmo)
                 continue
 
             # CT-e
             if root.tag.endswith('cteProc') or root.tag.endswith('CTe'):
-                # Este bloco pode precisar de um tratamento de salvamento similar se também tiver problemas de formato.
-                # Por enquanto, mantido como estava.
-                # ... (bloco de CT-e continua o mesmo)
                 continue
             
             # NFe e eventos
             if 'procEventoNFe' in root.tag:
-                # A lógica de alteração para eventos continua a mesma
-                inf_evento_evento = find_element_deep(root, 'evento/infEvento')
-                tp_evento = find_element(inf_evento_evento, 'tpEvento')
-                if inf_evento_evento is not None and tp_evento is not None and tp_evento.text == '110111':
-                    # ... sua lógica de alteração de eventos aqui ...
-                    pass
+                pass
             else:
                 inf_nfe = find_element_deep(root, 'infNFe')
                 if inf_nfe is None: continue
@@ -328,6 +320,57 @@ def editar_arquivos(folder_path, constantes_empresa):
                                     tag.text = valor
                                     if f"Imposto: <{campo_json}> alterado" not in alteracoes:
                                         alteracoes.append(f"Imposto: <{campo_json}> alterado")
+                    
+                    # --- INÍCIO DA NOVA LÓGICA DE ALTERAÇÃO DE CST ---
+                    if alterar_cst and mapeamento_cst:
+                        imposto = find_element(det, 'imposto')
+                        prod = find_element(det, 'prod')
+                        cfop_produto_tag = find_element(prod, 'CFOP')
+
+                        if imposto is not None and cfop_produto_tag is not None and cfop_produto_tag.text in mapeamento_cst:
+                            regras_cst = mapeamento_cst[cfop_produto_tag.text]
+                            
+                            # Altera CST do ICMS
+                            if 'ICMS' in regras_cst:
+                                icms_tag = find_element(imposto, 'ICMS')
+                                if icms_tag is not None:
+                                    cst_icms_tag = find_element_deep(icms_tag, 'CST')
+                                    if cst_icms_tag is not None:
+                                        cst_icms_tag.text = regras_cst['ICMS']
+                                        if "CST do ICMS alterado" not in alteracoes:
+                                            alteracoes.append("CST do ICMS alterado")
+
+                            # Altera CST do IPI
+                            if 'IPI' in regras_cst:
+                                ipi_tag = find_element(imposto, 'IPI')
+                                if ipi_tag is not None:
+                                    cst_ipi_tag = find_element_deep(ipi_tag, 'CST')
+                                    if cst_ipi_tag is not None:
+                                        cst_ipi_tag.text = regras_cst['IPI']
+                                        if "CST do IPI alterado" not in alteracoes:
+                                            alteracoes.append("CST do IPI alterado")
+
+                            # Altera CST do PIS
+                            if 'PIS' in regras_cst:
+                                pis_tag = find_element(imposto, 'PIS')
+                                if pis_tag is not None:
+                                    cst_pis_tag = find_element_deep(pis_tag, 'CST')
+                                    if cst_pis_tag is not None:
+                                        cst_pis_tag.text = regras_cst['PIS']
+                                        if "CST do PIS alterado" not in alteracoes:
+                                            alteracoes.append("CST do PIS alterado")
+                            
+                            # Altera CST do COFINS
+                            if 'COFINS' in regras_cst:
+                                cofins_tag = find_element(imposto, 'COFINS')
+                                if cofins_tag is not None:
+                                    cst_cofins_tag = find_element_deep(cofins_tag, 'CST')
+                                    if cst_cofins_tag is not None:
+                                        cst_cofins_tag.text = regras_cst['COFINS']
+                                        if "CST do COFINS alterado" not in alteracoes:
+                                            alteracoes.append("CST do COFINS alterado")
+                    # --- FIM DA NOVA LÓGICA DE ALTERAÇÃO DE CST ---
+
                 if alterar_data and nova_data_str:
                     nova_data_fmt = datetime.strptime(nova_data_str, "%d/%m/%Y").strftime(f'%Y-%m-%dT{datetime.now().strftime("%H:%M:%S")}-03:00')
                     ide = find_element(inf_nfe, 'ide')
@@ -370,21 +413,14 @@ def editar_arquivos(folder_path, constantes_empresa):
             
             ### Bloco de Salvamento Final para NFe e Eventos ###
             
-            # Passo 1: Gera o XML em string, com a declaração <?xml ...?>
             xml_str = ET.tostring(root, encoding='unicode', method='xml', xml_declaration=True)
-
-            # Passo 2: Manipulação de texto para reverter o prefixo 'ds:' para o formato original.
             xml_str = xml_str.replace(f' xmlns:ds="{NS_DS["ds"]}"', '')
             xml_str = xml_str.replace('<ds:Signature>', f'<Signature xmlns="{NS_DS["ds"]}">')
             xml_str = xml_str.replace('<ds:', '<').replace('</ds:', '</')
-
-            # Passo 3: Reintroduz a compactação (minificação) para garantir que o XML fique em uma única linha.
             xml_str = xml_str.replace('\n', '').replace('\r', '').replace('\t', '')
             xml_str = re.sub(r'>\s+<', '><', xml_str)
-            # Garante que a declaração XML fique colada na tag raiz, sem quebra de linha.
             xml_str = xml_str.replace('?>\n<', '?><')
             
-            # Passo 4: Salva o arquivo final.
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(xml_str)
 
