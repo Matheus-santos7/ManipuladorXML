@@ -1,8 +1,8 @@
 {
   "ATLAS": {
     "caminhos": {
-      "pasta_origem": "/Users/apple/Documents/NerusO2/ATLAS/Cenario 1",
-      "pasta_edicao": "/Users/apple/Documents/NerusO2/ATLAS/Cenario 1"
+      "pasta_origem": "/Users/apple/Documents/NerusO2/ATLAS/Cenario 5",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/ATLAS/Cenario 5"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
@@ -42,7 +42,8 @@
       "impostos": false,
       "data": true,
       "refNFe": true,
-      "cst": true
+      "cst": true,
+      "zerar_ipi_remessa_retorno": true
     },
     "mapeamento_cst": {
       "6105": {
@@ -60,6 +61,18 @@
       "1949": {
         "ICMS": "00",
         "IPI": "55",
+        "PIS": "09",
+        "COFINS": "09"
+      },
+      "1201": {
+        "ICMS": "00",
+        "IPI": "50",
+        "PIS": "01",
+        "COFINS": "01"
+      },
+      "2201": {
+        "ICMS": "00",
+        "IPI": "50",
         "PIS": "01",
         "COFINS": "01"
       }
@@ -108,7 +121,8 @@
       "impostos": false,
       "data": true,
       "refNFe": true,
-      "cst": true
+      "cst": true,
+      "zerar_ipi_remessa_retorno": true
     },
     "mapeamento_cst": {
       "6105": {
