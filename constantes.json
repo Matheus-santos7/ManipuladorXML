@@ -1,8 +1,8 @@
 {
   "ATLAS": {
     "caminhos": {
-      "pasta_origem": "/Users/apple/Documents/NerusO2/ITATIAIA/Cenario 1",
-      "pasta_edicao": "/Users/apple/Documents/NerusO2/ITATIAIA/Cenario 1"
+      "pasta_origem": "itatiaia_test",
+      "pasta_edicao": "itatiaia_test"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
@@ -46,8 +46,8 @@
   },
   "ITATIAIA": {
     "caminhos": {
-      "pasta_origem": "/Users/apple/Documents/NerusO2/ITATIAIA/Cenario 1",
-      "pasta_edicao": "/Users/apple/Documents/NerusO2/ITATIAIA/Cenario 1"
+      "pasta_origem": "/Users/apple/Documents/NerusO2/ITATIAIA/SP",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/ITATIAIA/SP"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
@@ -79,7 +79,7 @@
       "pIPI": "5.00"
     },
     "data": {
-      "nova_data": "02/07/2025"
+      "nova_data": "15/08/2025"
     },
     "alterar": {
       "emitente": true,
