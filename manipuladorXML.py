@@ -252,15 +252,20 @@ def editar_arquivos(folder_path, constantes_empresa):
     nova_data_str = constantes_empresa.get('data', {}).get('nova_data')
     mapeamento_cst = constantes_empresa.get('mapeamento_cst', {})
 
+    # --- Mapeamento de chaves e referências para atualização de NFe e CTe ---
     chave_mapping, reference_map = {}, {}
     all_nfe_infos = [get_xml_info(f) for f in arquivos]; all_nfe_infos = [info for info in all_nfe_infos if info]
     nNF_to_key_map = {info['nfe_number']: info['chave'] for info in all_nfe_infos}
 
+    # --- Prepara os dicionários de mapeamento de chaves e referências ---
     for info in all_nfe_infos:
         original_key = info['chave']
+        # Mapeia referência de NFe para atualização cruzada (ex: CTe referenciando NFe)
         if info['ref_nfe']:
             referenced_nNF = info['ref_nfe'][25:34].lstrip('0')
-            if referenced_nNF in nNF_to_key_map: reference_map[original_key] = nNF_to_key_map[referenced_nNF]
+            if referenced_nNF in nNF_to_key_map:
+                reference_map[original_key] = nNF_to_key_map[referenced_nNF]
+        # Prepara nova chave de acesso se for alterar emitente ou data
         if alterar_emitente or alterar_data:
             cnpj_original = info.get('emit_cnpj', '')
             novo_cnpj = novo_emitente.get('CNPJ', cnpj_original) if alterar_emitente else cnpj_original
@@ -280,7 +285,10 @@ def editar_arquivos(folder_path, constantes_empresa):
             root = tree.getroot()
 
             # --- INÍCIO DA ALTERAÇÃO ---
-            # Adiciona lógica para arquivos de inutilização
+
+            # =====================
+            # LÓGICA DE INUTILIZAÇÃO
+            # =====================
             if 'procInutNFe' in root.tag:
                 msg = f"Inutilização: {os.path.basename(file_path)}"
                 
@@ -307,10 +315,60 @@ def editar_arquivos(folder_path, constantes_empresa):
                         dh_recbto_tag.text = nova_data_fmt
                         alteracoes.append("Inutilização: <dhRecbto> alterado")
 
-            elif 'cteProc' in root.tag or 'CTe' in root.tag or 'procEventoNFe' in root.tag:
+            # =====================
+            # LÓGICA DE CTe (edição de chave e referência de NFe)
+            # =====================
+            elif 'cteProc' in root.tag or 'CTe' in root.tag:
+                msg = f"CTe: {os.path.basename(file_path)}"
+                inf_cte = find_element_deep(root, 'infCte')
+                if inf_cte is None:
+                    continue
+                original_key = inf_cte.get('Id')[3:]
+                alterou = False
+
+                # Alterar chave de acesso do CTe se houver mapeamento
+                if original_key in chave_mapping:
+                    nova_chave = chave_mapping[original_key]
+                    inf_cte.set('Id', 'CTe' + nova_chave)
+                    alteracoes.append(f"Chave de acesso do CTe alterada para: {nova_chave}")
+                    alterou = True
+
+                # Atualizar referência da NFe vinculada ao CTe
+                ide = find_element(inf_cte, 'ide')
+                if ide is not None:
+                    for refnfe_tag in ide.findall('.//nfeRef'):
+                        refnfe_val = refnfe_tag.text
+                        if refnfe_val and refnfe_val in chave_mapping:
+                            refnfe_tag.text = chave_mapping[refnfe_val]
+                            alteracoes.append(f"Referência de NFe no CTe atualizada para: {chave_mapping[refnfe_val]}")
+                            alterou = True
+
+                if alterou:
+                    print(f"\n[OK] {msg}")
+                    for a in sorted(list(set(alteracoes))):
+                        print(f"   - {a}")
+                    total_editados += 1
+
+                # Salvar alterações e formatar XML
+                xml_str = ET.tostring(root, encoding='unicode', method='xml', xml_declaration=True)
+                xml_str = xml_str.replace(f' xmlns:ds="{NS_DS["ds"]}"', '')
+                xml_str = xml_str.replace('<ds:Signature>', f'<Signature xmlns="{NS_DS["ds"]}">')
+                xml_str = xml_str.replace('<ds:', '<').replace('</ds:', '</')
+                xml_str = xml_str.replace('\n', '').replace('\r', '').replace('\t', '')
+                xml_str = re.sub(r'>\s+<', '><', xml_str)
+                xml_str = xml_str.replace('?>\n<', '?><')
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(xml_str)
                 continue
-            
-            # Lógica existente para NFe
+            # =====================
+            # LÓGICA DE EVENTOS (pular pois não editamos aqui)
+            # =====================
+            elif 'procEventoNFe' in root.tag:
+                continue
+
+            # =====================
+            # LÓGICA DE NFe (edição principal)
+            # =====================
             else:
                 inf_nfe = find_element_deep(root, 'infNFe')
                 if inf_nfe is None: continue
@@ -318,6 +376,7 @@ def editar_arquivos(folder_path, constantes_empresa):
                 msg = f"NFe: {os.path.basename(file_path)}"
                 original_key = inf_nfe.get('Id')[3:]
 
+                # --- Alteração de dados do emitente ---
                 if alterar_emitente and novo_emitente:
                     emit = find_element(inf_nfe, 'emit')
                     if emit is not None:
@@ -330,6 +389,7 @@ def editar_arquivos(folder_path, constantes_empresa):
                                     tag.text = valor
                                     alteracoes.append(f"Emitente: <{campo}> alterado")
                 
+                # --- Alteração de produtos, impostos, CST, IPI, etc. ---
                 for det in find_all_elements(inf_nfe, 'det'):
                     prod = find_element(det, 'prod')
                     imposto = find_element(det, 'imposto')
@@ -382,6 +442,7 @@ def editar_arquivos(folder_path, constantes_empresa):
                                     cst_cofins_tag = find_element_deep(cofins_tag, 'CST')
                                     if cst_cofins_tag is not None: cst_cofins_tag.text = regras_cst['COFINS']; alteracoes.append("CST do COFINS alterado")
                     
+                    # --- Zerar IPI para remessa/retorno ---
                     if zerar_ipi_remessa_retorno:
                         cfop_produto_tag = find_element(prod, 'CFOP')
                         if cfop_produto_tag is not None and (cfop_produto_tag.text in REMESSAS_CFOP or cfop_produto_tag.text in RETORNOS_CFOP):
@@ -398,6 +459,7 @@ def editar_arquivos(folder_path, constantes_empresa):
                                     pIPI_tag.text = "0.0000"
                                     alteracoes.append("IPI do item: Alíquota (pIPI) zerada")
 
+                # --- Recalcula totais se IPI foi zerado ---
                 if zerar_ipi_remessa_retorno:
                     icms_tot_tag = find_element_deep(inf_nfe, 'total/ICMSTot')
                     if icms_tot_tag is not None:
@@ -442,6 +504,7 @@ def editar_arquivos(folder_path, constantes_empresa):
                             vnf_total_tag.text = f"{novo_vnf.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}"
                             alteracoes.append("Total vNF recalculado")
 
+                # --- Alteração de datas de emissão e saída/entrada ---
                 if alterar_data and nova_data_str:
                     nova_data_fmt = datetime.strptime(nova_data_str, "%d/%m/%Y").strftime(f'%Y-%m-%dT{datetime.now().strftime("%H:%M:%S")}-03:00')
                     ide = find_element(inf_nfe, 'ide')
@@ -458,6 +521,7 @@ def editar_arquivos(folder_path, constantes_empresa):
                             tag_recbto.text = nova_data_fmt
                             alteracoes.append("Protocolo: <dhRecbto> alterado")
                 
+                # --- Alteração da chave de acesso (ID) ---
                 if original_key in chave_mapping:
                     nova_chave = chave_mapping[original_key]
                     inf_nfe.set('Id', 'NFe' + nova_chave)
@@ -469,6 +533,7 @@ def editar_arquivos(folder_path, constantes_empresa):
                             ch_nfe.text = nova_chave
                             alteracoes.append("Chave de Acesso do Protocolo alterada")
                 
+                # --- Alteração da referência de NFe (NFref) ---
                 if alterar_ref_nfe and original_key in reference_map:
                     original_referenced_key = reference_map[original_key]
                     if original_referenced_key in chave_mapping:

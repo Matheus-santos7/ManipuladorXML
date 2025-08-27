@@ -1,8 +1,8 @@
 {
   "ATLAS": {
     "caminhos": {
-      "pasta_origem": "/Users/apple/Documents/NerusO2/ATLAS/Cenario 5",
-      "pasta_edicao": "/Users/apple/Documents/NerusO2/ATLAS/Cenario 5"
+      "pasta_origem": "/Users/apple/Documents/NerusO2/ATLAS/Cancelamento07",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/ATLAS/Cancelamento07"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
@@ -34,7 +34,7 @@
       "pIPI": "5.00"
     },
     "data": {
-      "nova_data": "15/08/2025"
+      "nova_data": "15/07/2025"
     },
     "alterar": {
       "emitente": true,
@@ -80,8 +80,8 @@
   },
   "ITATIAIA": {
     "caminhos": {
-      "pasta_origem": "/Users/apple/Documents/NerusO2/ITATIAIA/SP",
-      "pasta_edicao": "/Users/apple/Documents/NerusO2/ITATIAIA/SP"
+      "pasta_origem": "/Users/apple/Documents/NerusO2/XML/ITATIAIA/Cenario 5  - Insucesso",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/XML/ITATIAIA/Cenario 5  - Insucesso"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
@@ -113,7 +113,7 @@
       "pIPI": "5.00"
     },
     "data": {
-      "nova_data": "15/08/2025"
+      "nova_data": "27/08/2025"
     },
     "alterar": {
       "emitente": true,
@@ -121,8 +121,8 @@
       "impostos": false,
       "data": true,
       "refNFe": true,
-      "cst": true,
-      "zerar_ipi_remessa_retorno": true
+      "cst": false,
+      "zerar_ipi_remessa_retorno": false
     },
     "mapeamento_cst": {
       "6105": {
@@ -134,14 +134,14 @@
       "5949": {
         "ICMS": "00",
         "IPI": "55",
-        "PIS": "09",
-        "COFINS": "09"
+        "PIS": "08",
+        "COFINS": "08"
       },
       "1949": {
         "ICMS": "00",
         "IPI": "55",
-        "PIS": "09",
-        "COFINS": "09"
+        "PIS": "08",
+        "COFINS": "08"
       }
     }
   }
