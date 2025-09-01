@@ -331,6 +331,13 @@ def editar_arquivos(folder_path, constantes_empresa):
                     nova_data_str=nova_data_str
                 )
             elif 'procEventoNFe' in root.tag:
+                alteracoes = _editar_cancelamento(root, chave_mapping, alterar_data, nova_data_str)
+                if alteracoes:
+                    print(f"\n[OK] Evento de Cancelamento: {os.path.basename(file_path)}")
+                    for a in sorted(set(alteracoes)):
+                        print(f"   - {a}")
+                    total_editados += 1
+                    _salvar_xml(root, file_path)
                 continue
             else:
                 msg, alteracoes = _editar_nfe(
@@ -497,6 +504,57 @@ def _editar_cte(root, file_path, chave_mapping, chave_da_venda_nova=None, altera
 
     return msg, alteracoes if alterou else []
 
+
+def _editar_cancelamento(root, chave_mapping, alterar_data=False, nova_data_str=None):
+    alteracoes = []
+    # Atualizar chave de referência chNFe
+    chnfe_tag = find_element_deep(root, 'evento/infEvento/chNFe')
+    if chnfe_tag is not None and chnfe_tag.text in chave_mapping:
+        chnfe_tag.text = chave_mapping[chnfe_tag.text]
+        alteracoes.append(f"chNFe alterado para nova chave: {chnfe_tag.text}")
+    # Atualizar data do evento dhEvento
+    if alterar_data and nova_data_str:
+        dh_evento_tag = find_element_deep(root, 'evento/infEvento/dhEvento')
+        if dh_evento_tag is not None:
+            nova_data_fmt = datetime.strptime(nova_data_str, "%d/%m/%Y").strftime(f'%Y-%m-%dT{datetime.now().strftime("%H:%M:%S")}-03:00')
+            dh_evento_tag.text = nova_data_fmt
+            alteracoes.append(f"dhEvento alterado para {nova_data_fmt}")
+        # Atualizar data de recebimento dhRecbto (caso exista)
+        dhrecbto_tag = find_element_deep(root, 'retEvento/infEvento/dhRecbto')
+        if dhrecbto_tag is not None:
+            dhrecbto_tag.text = nova_data_fmt
+            alteracoes.append(f"dhRecbto alterado para {nova_data_fmt}")
+        # Atualizar dhRegEvento do evento de cancelamento
+        dhreg_tag = find_element_deep(root, 'retEvento/infEvento/dhRegEvento')
+        if dhreg_tag is not None and alterar_data and nova_data_str:
+            dhreg_tag.text = nova_data_fmt
+            alteracoes.append(f"dhRegEvento alterado para {nova_data_fmt}")
+    # Garante que chNFe sempre será a nova chave da nota cancelada
+    if chnfe_tag is not None:
+        chave_antiga = chnfe_tag.text
+        numero_nota = chave_antiga[25:34]  # Posição do número da nota na chave
+        chave_correta = None
+        for nova_chave in chave_mapping.values():
+            if nova_chave[25:34] == numero_nota:
+                chave_correta = nova_chave
+                break
+        if chave_correta:
+            chnfe_tag.text = chave_correta
+            alteracoes.append(f"chNFe alterado para nova chave encontrada pelo número: {chave_correta}")
+    # Atualiza todas as tags <chNFe> em qualquer nível do evento de cancelamento
+    for tag in root.iter():
+        if tag.tag.endswith('chNFe'):
+            chave_antiga = tag.text
+            numero_nota = chave_antiga[25:34] if chave_antiga else None
+            chave_correta = None
+            for nova_chave in chave_mapping.values():
+                if numero_nota and nova_chave[25:34] == numero_nota:
+                    chave_correta = nova_chave
+                    break
+            if chave_correta and tag.text != chave_correta:
+                tag.text = chave_correta
+                alteracoes.append(f"<chNFe> alterado para nova chave encontrada pelo número: {chave_correta}")
+    return alteracoes
 
 def _editar_nfe(
     root, alterar_emitente, novo_emitente, alterar_produtos, novo_produto,
