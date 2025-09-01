@@ -1,8 +1,8 @@
 {
   "ATLAS": {
     "caminhos": {
-      "pasta_origem": "/Users/apple/Documents/NerusO2/ATLAS/Cancelamento07",
-      "pasta_edicao": "/Users/apple/Documents/NerusO2/ATLAS/Cancelamento07"
+      "pasta_origem": "/Users/apple/Documents/ManipuladorXML/Cenario 1",
+      "pasta_edicao": "/Users/apple/Documents/ManipuladorXML/Cenario 1"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
@@ -34,7 +34,7 @@
       "pIPI": "5.00"
     },
     "data": {
-      "nova_data": "15/07/2025"
+      "nova_data": "01/09/2025"
     },
     "alterar": {
       "emitente": true,
@@ -80,8 +80,8 @@
   },
   "ITATIAIA": {
     "caminhos": {
-      "pasta_origem": "/Users/apple/Documents/NerusO2/XML/ITATIAIA/Cenario 5  - Insucesso",
-      "pasta_edicao": "/Users/apple/Documents/NerusO2/XML/ITATIAIA/Cenario 5  - Insucesso"
+      "pasta_origem": "/Users/apple/Documents/NerusO2/XML/ATLAS/Cenario 15",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/XML/ATLAS/Cenario 15"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
