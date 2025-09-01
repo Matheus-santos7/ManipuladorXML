@@ -18,8 +18,8 @@ RETORNOS_CFOP = ['1949', '2949', '5902', '6902']
 REMESSAS_CFOP = ['5949', '5156', '6152', '6949', '6905', '5901', '6901']
 
 
-# Namespace padrão para NFe (usado nas buscas de tags XML)
-NS = {'nfe': 'http://www.portalfiscal.inf.br/nfe'}
+# Namespace padrão para NFe e CTe (usado nas buscas de tags XML)
+NS = {'nfe': 'http://www.portalfiscal.inf.br/nfe', 'cte': 'http://www.portalfiscal.inf.br/cte'}
 # Namespace para a Assinatura Digital (Digital Signature)
 NS_DS = {'ds': 'http://www.w3.org/2000/09/xmldsig#'}
 
@@ -27,30 +27,48 @@ NS_DS = {'ds': 'http://www.w3.org/2000/09/xmldsig#'}
 # Função para buscar um elemento XML com ou sem namespace
 def find_element(parent, path):
     if parent is None: return None
-    namespaced_path = '/'.join([f'nfe:{tag}' for tag in path.split('/')])
-    element = parent.find(namespaced_path, NS)
-    if element is None:
-        element = parent.find(path)
+    # Tenta com namespace nfe
+    namespaced_path_nfe = '/'.join([f'nfe:{tag}' for tag in path.split('/')])
+    element = parent.find(namespaced_path_nfe, NS)
+    if element is not None: return element
+    # Tenta com namespace cte
+    namespaced_path_cte = '/'.join([f'cte:{tag}' for tag in path.split('/')])
+    element = parent.find(namespaced_path_cte, NS)
+    if element is not None: return element
+    # Tenta sem namespace
+    element = parent.find(path)
     return element
 
 
 # Busca todos os elementos XML de um caminho, com ou sem namespace
 def find_all_elements(parent, path):
     if parent is None: return []
-    namespaced_path = '/'.join([f'nfe:{tag}' for tag in path.split('/')])
-    elements = parent.findall(namespaced_path, NS)
-    if not elements:
-        elements = parent.findall(path)
+    # Tenta com namespace nfe
+    namespaced_path_nfe = '/'.join([f'nfe:{tag}' for tag in path.split('/')])
+    elements = parent.findall(namespaced_path_nfe, NS)
+    if elements: return elements
+    # Tenta com namespace cte
+    namespaced_path_cte = '/'.join([f'cte:{tag}' for tag in path.split('/')])
+    elements = parent.findall(namespaced_path_cte, NS)
+    if elements: return elements
+    # Tenta sem namespace
+    elements = parent.findall(path)
     return elements
 
 
 # Busca profunda (em qualquer nível) de um elemento XML
 def find_element_deep(parent, path):
     if parent is None: return None
-    namespaced_path = './/' + '/'.join([f'nfe:{tag}' for tag in path.split('/')])
-    element = parent.find(namespaced_path, NS)
-    if element is None:
-        element = parent.find(f'.//{path}')
+    # Tenta com namespace nfe
+    namespaced_path_nfe = './/' + '/'.join([f'nfe:{tag}' for tag in path.split('/')])
+    element = parent.find(namespaced_path_nfe, NS)
+    if element is not None: return element
+    # Tenta com namespace cte
+    namespaced_path_cte = './/' + '/'.join([f'cte:{tag}' for tag in path.split('/')])
+    element = parent.find(namespaced_path_cte, NS)
+    if element is not None: return element
+    # Tenta sem namespace
+    element = parent.find(f'.//{path}')
     return element
 
 
@@ -101,7 +119,7 @@ def get_xml_info(file_path):
         ET.register_namespace('', NS['nfe'])
         tree = ET.parse(file_path)
         root = tree.getroot()
-        if 'procEventoNFe' in root.tag:
+        if 'procEventoNFe' in root.tag or 'cte' in root.tag.lower():
             return None
         inf_nfe = find_element_deep(root, 'infNFe')
         if inf_nfe is None:
@@ -194,9 +212,7 @@ def _extrair_infos_xmls(xmls):
     return nfe_infos, eventos_info
 
 def _renomear_nfe(nfe_infos, folder_path):
-    total_renomeados = 0
-    total_puladas = 0
-    total_erros = 0
+    total_renomeados, total_puladas, total_erros = 0, 0, 0
     for nfe_number, info in nfe_infos.items():
         novo_nome = _gerar_novo_nome_nfe(info)
         if novo_nome:
@@ -245,8 +261,7 @@ def _gerar_novo_nome_nfe(info):
     return ''
 
 def _renomear_eventos(eventos_info, nfe_infos, folder_path):
-    total_renomeados = 0
-    total_erros = 0
+    total_renomeados, total_erros = 0, 0
     chave_to_nfe_map = {info['chave']: info['nfe_number'] for info in nfe_infos.values()}
     for evento in eventos_info:
         chave_cancelada = evento['chave_cancelada']
@@ -294,26 +309,27 @@ def editar_arquivos(folder_path, constantes_empresa):
     nova_data_str = constantes_empresa.get('data', {}).get('nova_data')
     mapeamento_cst = constantes_empresa.get('mapeamento_cst', {})
 
-    chave_mapping, reference_map, nNF_to_key_map = _prepara_mapeamentos(arquivos, alterar_emitente, alterar_data, novo_emitente, nova_data_str)
+    chave_mapping, reference_map, chave_da_venda_nova = _prepara_mapeamentos(arquivos, alterar_emitente, alterar_data, novo_emitente, nova_data_str)
 
-    total_editados = 0
-    total_erros = 0
+    total_editados, total_erros = 0, 0
     for file_path in arquivos:
         try:
             parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
             tree = ET.parse(file_path, parser)
             root = tree.getroot()
-            alteracoes = []
-            msg = ""
+            alteracoes, msg = [], ""
 
             if 'procInutNFe' in root.tag:
                 msg, alteracoes = _editar_inutilizacao(root, alterar_emitente, novo_emitente, alterar_data, nova_data_str)
             elif 'cteProc' in root.tag or 'CTe' in root.tag:
-                msg, alteracoes = _editar_cte(root, file_path, chave_mapping)
-                if alteracoes:
-                    total_editados += 1
-                    _salvar_xml(root, file_path)
-                continue
+                msg, alteracoes = _editar_cte(
+                    root, file_path, chave_mapping,
+                    chave_da_venda_nova=chave_da_venda_nova,
+                    alterar_remetente=cfg.get('emitente', False),
+                    novo_remetente=constantes_empresa.get('emitente'),
+                    alterar_data=alterar_data,
+                    nova_data_str=nova_data_str
+                )
             elif 'procEventoNFe' in root.tag:
                 continue
             else:
@@ -329,8 +345,7 @@ def editar_arquivos(folder_path, constantes_empresa):
                 for a in sorted(set(alteracoes)):
                     print(f"   - {a}")
                 total_editados += 1
-
-            _salvar_xml(root, file_path)
+                _salvar_xml(root, file_path)
 
         except Exception as e:
             print(f"\n[ERRO] Falha ao editar {os.path.basename(file_path)}: {e}")
@@ -342,6 +357,8 @@ def editar_arquivos(folder_path, constantes_empresa):
 
 def _prepara_mapeamentos(arquivos, alterar_emitente, alterar_data, novo_emitente, nova_data_str):
     chave_mapping, reference_map = {}, {}
+    chave_da_venda_nova = None
+
     all_nfe_infos = [get_xml_info(f) for f in arquivos]
     all_nfe_infos = [info for info in all_nfe_infos if info]
     nNF_to_key_map = {info['nfe_number']: info['chave'] for info in all_nfe_infos}
@@ -357,16 +374,21 @@ def _prepara_mapeamentos(arquivos, alterar_emitente, alterar_data, novo_emitente
             novo_cnpj = novo_emitente.get('CNPJ', cnpj_original) if alterar_emitente else cnpj_original
             novo_cnpj_num = ''.join(filter(str.isdigit, novo_cnpj))
             novo_ano_mes = datetime.strptime(nova_data_str, "%d/%m/%Y").strftime('%y%m') if (alterar_data and nova_data_str) else original_key[2:6]
-            nova_chave_sem_dv = original_key[:2] + novo_ano_mes + novo_cnpj_num.zfill(14) + original_key[20:43]
-            chave_mapping[original_key] = nova_chave_sem_dv + calcular_dv_chave(nova_chave_sem_dv)
-    return chave_mapping, reference_map, nNF_to_key_map
+            
+            resto_da_chave = original_key[20:43]
+            nova_chave_sem_dv = original_key[:2] + novo_ano_mes + novo_cnpj_num.zfill(14) + resto_da_chave
+            nova_chave_com_dv = nova_chave_sem_dv + calcular_dv_chave(nova_chave_sem_dv)
+            chave_mapping[original_key] = nova_chave_com_dv
+
+            if "Venda.xml" in info['caminho_completo']:
+                chave_da_venda_nova = nova_chave_com_dv
+    
+    return chave_mapping, reference_map, chave_da_venda_nova
 
 
 def _editar_inutilizacao(root, alterar_emitente, novo_emitente, alterar_data, nova_data_str):
-    alteracoes = []
-    msg = f"Inutilização: {root.tag}"
-    ano_novo = None
-    cnpj_novo = None
+    alteracoes, msg = [], f"Inutilização: {root.tag}"
+    ano_novo, cnpj_novo = None, None
     if alterar_emitente and novo_emitente:
         cnpj_tag = find_element_deep(root, 'inutNFe/infInut/CNPJ')
         if cnpj_tag is not None:
@@ -386,48 +408,93 @@ def _editar_inutilizacao(root, alterar_emitente, novo_emitente, alterar_data, no
             dh_recbto_tag.text = nova_data_fmt
             alteracoes.append("Inutilização: <dhRecbto> alterado")
 
-    # Manipulação da chave de acesso da inutilização (Id em infInut)
     inf_inut = find_element_deep(root, 'inutNFe/infInut')
     if inf_inut is not None:
         id_atual = inf_inut.get('Id')
         if id_atual and (ano_novo or cnpj_novo):
-            # Chave: ID{UF}{Ano}{CNPJ}{mod}{serie}{nNFIni}{nNFFin}
-            # Exemplo: ID3525CNPJ000000000000001100100000000100000001
-            # Extrai partes da chave atual
             uf = id_atual[2:4]
             ano = ano_novo if ano_novo else id_atual[4:6]
             cnpj = ''.join(filter(str.isdigit, cnpj_novo)) if cnpj_novo else id_atual[6:20]
-            mod = id_atual[20:22]
-            serie = id_atual[22:25]
-            nNFIni = id_atual[25:34]
-            nNFFin = id_atual[34:43]
+            mod, serie = id_atual[20:22], id_atual[22:25]
+            nNFIni, nNFFin = id_atual[25:34], id_atual[34:43]
             nova_chave = f"ID{uf}{ano}{cnpj.zfill(14)}{mod}{serie}{nNFIni}{nNFFin}"
             inf_inut.set('Id', nova_chave)
             alteracoes.append(f"Inutilização: <Id> alterado para {nova_chave}")
     return msg, alteracoes
 
 
-def _editar_cte(root, file_path, chave_mapping):
-    alteracoes = []
-    msg = f"CTe: {os.path.basename(file_path)}"
+def _editar_cte(root, file_path, chave_mapping, chave_da_venda_nova=None, alterar_remetente=False, novo_remetente=None, alterar_data=False, nova_data_str=None):
+    alteracoes, msg = [], f"CTe: {os.path.basename(file_path)}"
     inf_cte = find_element_deep(root, 'infCte')
-    if inf_cte is None:
-        return msg, alteracoes
-    original_key = inf_cte.get('Id')[3:]
+    if inf_cte is None: return msg, alteracoes
     alterou = False
-    if original_key in chave_mapping:
-        nova_chave = chave_mapping[original_key]
-        inf_cte.set('Id', 'CTe' + nova_chave)
-        alteracoes.append(f"Chave de acesso do CTe alterada para: {nova_chave}")
-        alterou = True
+    
+    id_atual = inf_cte.get('Id')
+    if alterar_data and nova_data_str and id_atual:
+        try:
+            uf, ano_novo = id_atual[3:5], datetime.strptime(nova_data_str, "%d/%m/%Y").strftime('%y')
+            cnpj, resto_chave = id_atual[5:19], id_atual[19:43]
+            dv_original = id_atual[43]
+            nova_chave_sem_dv = f"{uf}{ano_novo}{cnpj}{resto_chave}"
+            nova_chave_com_dv = "CTe" + nova_chave_sem_dv + dv_original
+            inf_cte.set('Id', nova_chave_com_dv)
+            alteracoes.append(f"Chave de acesso do CTe alterada para: {nova_chave_com_dv}")
+            alterou = True
+        except IndexError:
+            alteracoes.append(f"[AVISO] Formato da chave de acesso do CT-e '{id_atual}' inesperado. Chave não alterada.")
+
     ide = find_element(inf_cte, 'ide')
-    if ide is not None:
-        for refnfe_tag in ide.findall('.//nfeRef'):
-            refnfe_val = refnfe_tag.text
-            if refnfe_val and refnfe_val in chave_mapping:
-                refnfe_tag.text = chave_mapping[refnfe_val]
-                alteracoes.append(f"Referência de NFe no CTe atualizada para: {chave_mapping[refnfe_val]}")
+    if ide is not None and alterar_data and nova_data_str:
+        dh_emi_tag = find_element(ide, 'dhEmi')
+        if dh_emi_tag is not None:
+            nova_data_fmt = datetime.strptime(nova_data_str, "%d/%m/%Y").strftime(f'%Y-%m-%dT{datetime.now().strftime("%H:%M:%S")}-03:00')
+            dh_emi_tag.text = nova_data_fmt
+            alteracoes.append(f"Data de Emissão <dhEmi> alterada para {nova_data_fmt}")
+            alterou = True
+
+    inf_doc = find_element_deep(inf_cte, 'infCTeNorm/infDoc')
+    if inf_doc is not None:
+        chave_tag = find_element_deep(inf_doc, 'infNFe/chave')
+        if chave_tag is not None and chave_da_venda_nova:
+            if chave_tag.text != chave_da_venda_nova:
+                chave_tag.text = chave_da_venda_nova
+                alteracoes.append(f"Referência de NFe <chave> FORÇADA para a chave da venda: {chave_da_venda_nova}")
                 alterou = True
+        elif not chave_da_venda_nova:
+             alteracoes.append("[AVISO] Nova chave da nota de venda não foi encontrada para referenciar no CT-e.")
+
+    if alterar_remetente and novo_remetente:
+        rem = find_element(inf_cte, 'rem')
+        if rem is not None:
+            ender_rem = find_element(rem, 'enderReme')
+            for campo, valor in novo_remetente.items():
+                target_element = ender_rem if campo in ['xLgr', 'nro', 'xCpl', 'xBairro', 'xMun', 'UF', 'fone'] else rem
+                if target_element is not None:
+                    tag = find_element(target_element, campo)
+                    if tag is not None:
+                        tag.text, alterou = str(valor), True
+                        alteracoes.append(f"Remetente: <{campo}> alterado")
+    
+    # Sincronizar chave do protCTe/infProt/chCTe com a chave do infCte/Id
+    prot_cte = find_element_deep(root, 'protCTe/infProt')
+    if prot_cte is not None and inf_cte is not None:
+        chcte_tag = find_element(prot_cte, 'chCTe')
+        if chcte_tag is not None:
+            id_sem_prefixo = inf_cte.get('Id')
+            if id_sem_prefixo and id_sem_prefixo.startswith('CTe'):
+                chcte_tag.text = id_sem_prefixo[3:]
+                alteracoes.append(f"protCTe/infProt/chCTe sincronizado com infCte/Id: {chcte_tag.text}")
+                alterou = True
+
+    # Atualizar dhRecbto do protCTe/infProt para a nova data
+    if prot_cte is not None and alterar_data and nova_data_str:
+        dhrecbto_tag = find_element(prot_cte, 'dhRecbto')
+        if dhrecbto_tag is not None:
+            nova_data_fmt = datetime.strptime(nova_data_str, "%d/%m/%Y").strftime(f'%Y-%m-%dT{datetime.now().strftime("%H:%M:%S")}-03:00')
+            dhrecbto_tag.text = nova_data_fmt
+            alteracoes.append(f"protCTe/infProt/dhRecbto alterado para {nova_data_fmt}")
+            alterou = True
+
     return msg, alteracoes if alterou else []
 
 
@@ -439,9 +506,8 @@ def _editar_nfe(
 ):
     alteracoes = []
     inf_nfe = find_element_deep(root, 'infNFe')
-    if inf_nfe is None:
-        return "", alteracoes
-    msg = f"NFe: {root.tag}"
+    if inf_nfe is None: return "", alteracoes
+    msg = f"NFe: {find_element(find_element(inf_nfe, 'ide'), 'nNF').text}"
     original_key = inf_nfe.get('Id')[3:]
 
     if alterar_emitente and novo_emitente:
@@ -457,78 +523,44 @@ def _editar_nfe(
                         alteracoes.append(f"Emitente: <{campo}> alterado")
 
     for det in find_all_elements(inf_nfe, 'det'):
-        prod = find_element(det, 'prod')
-        imposto = find_element(det, 'imposto')
-
+        prod, imposto = find_element(det, 'prod'), find_element(det, 'imposto')
         if alterar_produtos and novo_produto and prod is not None:
             for campo, valor in novo_produto.items():
                 tag = find_element(prod, campo)
-                if tag is not None:
+                if tag is not None and f"Produto: <{campo}> alterado" not in alteracoes:
                     tag.text = valor
-                    if f"Produto: <{campo}> alterado" not in alteracoes:
-                        alteracoes.append(f"Produto: <{campo}> alterado")
-
-        if imposto is None:
-            continue
+                    alteracoes.append(f"Produto: <{campo}> alterado")
+        if imposto is None: continue
 
         if alterar_impostos and novos_impostos:
             for campo_json, valor in novos_impostos.items():
                 tag = find_element_deep(imposto, campo_json)
-                if tag is not None:
+                if tag is not None and f"Imposto: <{campo_json}> alterado" not in alteracoes:
                     tag.text = valor
-                    if f"Imposto: <{campo_json}> alterado" not in alteracoes:
-                        alteracoes.append(f"Imposto: <{campo_json}> alterado")
+                    alteracoes.append(f"Imposto: <{campo_json}> alterado")
+        
+        cfop_tag = find_element(prod, 'CFOP') if prod else None
+        if cfop_tag is not None and cfop_tag.text:
+            cfop = cfop_tag.text
+            if alterar_cst and cfop in mapeamento_cst:
+                regras_cst = mapeamento_cst[cfop]
+                for imposto_nome, cst_valor in regras_cst.items():
+                    imposto_tag = find_element(imposto, imposto_nome)
+                    if imposto_tag:
+                        cst_tag = find_element_deep(imposto_tag, 'CST')
+                        if cst_tag is not None:
+                            cst_tag.text = cst_valor
+                            alteracoes.append(f"CST do {imposto_nome} alterado")
 
-        if alterar_cst and mapeamento_cst:
-            cfop_produto_tag = find_element(prod, 'CFOP')
-            if cfop_produto_tag is not None and cfop_produto_tag.text in mapeamento_cst:
-                regras_cst = mapeamento_cst[cfop_produto_tag.text]
-                if 'ICMS' in regras_cst:
-                    icms_tag = find_element(imposto, 'ICMS')
-                    if icms_tag is not None:
-                        cst_icms_tag = find_element_deep(icms_tag, 'CST')
-                        if cst_icms_tag is not None:
-                            cst_icms_tag.text = regras_cst['ICMS']
-                            alteracoes.append("CST do ICMS alterado")
-                if 'IPI' in regras_cst:
-                    ipi_tag = find_element(imposto, 'IPI')
-                    if ipi_tag is not None:
-                        cst_ipi_tag = find_element_deep(ipi_tag, 'CST')
-                        vBC_tag = find_element_deep(ipi_tag, 'vBC')
-                        if vBC_tag is not None:
-                            vBC_tag.text = "0.00"
-                            alteracoes.append("IPI do item: Base de cálculo (vBC) zerada")
-                        if cst_ipi_tag is not None:
-                            cst_ipi_tag.text = regras_cst['IPI']
-                            alteracoes.append("CST do IPI alterado")
-                if 'PIS' in regras_cst:
-                    pis_tag = find_element(imposto, 'PIS')
-                    if pis_tag is not None:
-                        cst_pis_tag = find_element_deep(pis_tag, 'CST')
-                        if cst_pis_tag is not None:
-                            cst_pis_tag.text = regras_cst['PIS']
-                            alteracoes.append("CST do PIS alterado")
-                if 'COFINS' in regras_cst:
-                    cofins_tag = find_element(imposto, 'COFINS')
-                    if cofins_tag is not None:
-                        cst_cofins_tag = find_element_deep(cofins_tag, 'CST')
-                        if cst_cofins_tag is not None:
-                            cst_cofins_tag.text = regras_cst['COFINS']
-                            alteracoes.append("CST do COFINS alterado")
-
-        if zerar_ipi_remessa_retorno:
-            cfop_produto_tag = find_element(prod, 'CFOP')
-            if cfop_produto_tag is not None and (cfop_produto_tag.text in REMESSAS_CFOP or cfop_produto_tag.text in RETORNOS_CFOP):
+            if zerar_ipi_remessa_retorno and cfop in REMESSAS_CFOP + RETORNOS_CFOP:
                 ipi_tag = find_element(imposto, 'IPI')
                 if ipi_tag is not None:
-                    vIPI_tag = find_element_deep(ipi_tag, 'vIPI')
-                    if vIPI_tag is not None:
-                        vIPI_tag.text = "0.00"
-                        alteracoes.append("IPI do item: Valor (vIPI) zerado")
-                    pIPI_tag = find_element_deep(ipi_tag, 'pIPI')
-                    if pIPI_tag is not None:
-                        pIPI_tag.text = "0.0000"
-                        alteracoes.append("IPI do item: Alíquota (pIPI) zerada")
+                    for tag_ipi in ['vIPI', 'vBC']:
+                        tag = find_element_deep(ipi_tag, tag_ipi)
+                        if tag is not None: tag.text = "0.00"
+                    tag_pIPI = find_element_deep(ipi_tag, 'pIPI')
+                    if tag_pIPI is not None: tag_pIPI.text = "0.0000"
+                    alteracoes.append("Valores de IPI zerados para remessa/retorno")
 
     if zerar_ipi_remessa_retorno:
         _recalcula_totais_ipi(inf_nfe, alteracoes)
@@ -536,14 +568,14 @@ def _editar_nfe(
     if alterar_data and nova_data_str:
         nova_data_fmt = datetime.strptime(nova_data_str, "%d/%m/%Y").strftime(f'%Y-%m-%dT{datetime.now().strftime("%H:%M:%S")}-03:00')
         ide = find_element(inf_nfe, 'ide')
-        if ide is not None:
+        if ide:
             for tag_data in ['dhEmi', 'dhSaiEnt']:
                 tag = find_element(ide, tag_data)
                 if tag is not None:
                     tag.text = nova_data_fmt
                     alteracoes.append(f"Data: <{tag_data}> alterada")
         prot_nfe = find_element_deep(root, 'protNFe/infProt')
-        if prot_nfe is not None:
+        if prot_nfe:
             tag_recbto = find_element(prot_nfe, 'dhRecbto')
             if tag_recbto is not None:
                 tag_recbto.text = nova_data_fmt
@@ -554,7 +586,7 @@ def _editar_nfe(
         inf_nfe.set('Id', 'NFe' + nova_chave)
         alteracoes.append(f"Chave de Acesso ID alterada para: {nova_chave}")
         prot_nfe = find_element_deep(root, 'protNFe/infProt')
-        if prot_nfe is not None:
+        if prot_nfe:
             ch_nfe = find_element(prot_nfe, 'chNFe')
             if ch_nfe is not None:
                 ch_nfe.text = nova_chave
@@ -574,54 +606,54 @@ def _editar_nfe(
 
 def _recalcula_totais_ipi(inf_nfe, alteracoes):
     icms_tot_tag = find_element_deep(inf_nfe, 'total/ICMSTot')
-    if icms_tot_tag is not None:
-        soma_vprod = Decimal('0.00')
-        soma_vipi = Decimal('0.00')
-        soma_vdesc = Decimal('0.00')
-        soma_vfrete = Decimal('0.00')
-        soma_vseg = Decimal('0.00')
-        soma_voutro = Decimal('0.00')
+    if icms_tot_tag is None: return
 
-        def safe_get_decimal(element, tag_name):
-            tag = find_element(element, tag_name)
-            if tag is not None and tag.text:
-                return Decimal(tag.text)
-            return Decimal('0.00')
+    somas = {'vProd': 0, 'vIPI': 0, 'vDesc': 0, 'vFrete': 0, 'vSeg': 0, 'vOutro': 0}
+    
+    def safe_get_decimal(element, tag_name):
+        tag = find_element(element, tag_name)
+        return Decimal(tag.text) if tag is not None and tag.text else Decimal('0.00')
 
-        for det in find_all_elements(inf_nfe, 'det'):
-            prod = find_element(det, 'prod')
-            imposto = find_element(det, 'imposto')
-            soma_vprod += safe_get_decimal(prod, 'vProd')
-            soma_vdesc += safe_get_decimal(prod, 'vDesc')
-            soma_vfrete += safe_get_decimal(prod, 'vFrete')
-            soma_vseg += safe_get_decimal(prod, 'vSeg')
-            soma_voutro += safe_get_decimal(prod, 'vOutro')
-            ipi_tag = find_element(imposto, 'IPI')
-            vipi_item_tag = find_element_deep(ipi_tag, 'vIPI')
-            if vipi_item_tag is not None and vipi_item_tag.text:
-                soma_vipi += Decimal(vipi_item_tag.text)
+    for det in find_all_elements(inf_nfe, 'det'):
+        prod = find_element(det, 'prod')
+        imposto = find_element(det, 'imposto')
+        for k in somas.keys():
+            if k != 'vIPI': somas[k] += safe_get_decimal(prod, k)
+        
+        ipi_tag = find_element(imposto, 'IPI')
+        somas['vIPI'] += safe_get_decimal(find_element_deep(ipi_tag, 'vIPI'), 'vIPI')
 
-        novo_vnf = soma_vprod - soma_vdesc + soma_vfrete + soma_vseg + soma_voutro + soma_vipi
+    novo_vnf = sum(somas.values()) - somas['vDesc']
+    
+    vipi_total_tag = find_element(icms_tot_tag, 'vIPI')
+    vnf_total_tag = find_element(icms_tot_tag, 'vNF')
 
-        vipi_total_tag = find_element(icms_tot_tag, 'vIPI')
-        vnf_total_tag = find_element(icms_tot_tag, 'vNF')
-
-        if vipi_total_tag is not None:
-            vipi_total_tag.text = f"{soma_vipi.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}"
-            alteracoes.append("Total vIPI recalculado")
-        if vnf_total_tag is not None:
-            vnf_total_tag.text = f"{novo_vnf.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}"
-            alteracoes.append("Total vNF recalculado")
+    if vipi_total_tag is not None:
+        vipi_total_tag.text = f"{somas['vIPI']:.2f}"
+        alteracoes.append("Total vIPI recalculado")
+    if vnf_total_tag is not None:
+        vnf_total_tag.text = f"{novo_vnf:.2f}"
+        alteracoes.append("Total vNF recalculado")
 
 
 def _salvar_xml(root, file_path):
-    xml_str = ET.tostring(root, encoding='unicode', method='xml', xml_declaration=True)
+    main_ns = ''
+    if find_element_deep(root, 'infNFe'):
+        main_ns = NS['nfe']
+        ET.register_namespace('', main_ns)
+    elif find_element_deep(root, 'infCte'):
+        # Para CTe, não registra namespace padrão para evitar ns0:
+        pass
+    ET.register_namespace('ds', NS_DS['ds'])
+    xml_str = ET.tostring(root, encoding='utf-8', method='xml', xml_declaration=True).decode('utf-8')
     xml_str = xml_str.replace(f' xmlns:ds="{NS_DS["ds"]}"', '')
     xml_str = xml_str.replace('<ds:Signature>', f'<Signature xmlns="{NS_DS["ds"]}">')
+    xml_str = xml_str.replace('</ds:Signature>', '</Signature>')
     xml_str = xml_str.replace('<ds:', '<').replace('</ds:', '</')
-    xml_str = xml_str.replace('\n', '').replace('\r', '').replace('\t', '')
-    xml_str = re.sub(r'>\s+<', '><', xml_str)
-    xml_str = xml_str.replace('?>\n<', '?><')
+    xml_str = re.sub(r'>\s+<', '><', xml_str.strip())
+    # Remove ns0: das tags e xmlns:ns0 do root
+    xml_str = re.sub(r'<(/?)(ns0:)', r'<\1', xml_str)
+    xml_str = xml_str.replace('xmlns:ns0="http://www.portalfiscal.inf.br/cte"', '')
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(xml_str)
 
@@ -631,19 +663,24 @@ if __name__ == "__main__":
     constantes = carregar_constantes('constantes.json')
     if constantes:
         constantes_empresa = selecionar_empresa(constantes)
-        configs, caminhos = constantes_empresa.get('configuracao_execucao', {}), constantes_empresa.get('caminhos', {})
-        run_rename, run_edit = configs.get('processar_e_renomear', False), configs.get('editar_arquivos', False)
-        pasta_origem, pasta_edicao = caminhos.get('pasta_origem'), caminhos.get('pasta_edicao')
+        configs = constantes_empresa.get('configuracao_execucao', {})
+        caminhos = constantes_empresa.get('caminhos', {})
+        run_rename = configs.get('processar_e_renomear', False)
+        run_edit = configs.get('editar_arquivos', False)
+        pasta_origem = caminhos.get('pasta_origem')
+        pasta_edicao = caminhos.get('pasta_edicao')
 
-        if run_rename and pasta_origem and os.path.isdir(pasta_origem):
-            processar_arquivos(pasta_origem)
-        elif run_rename:
-            print(f"Erro: Caminho da 'pasta_origem' ('{pasta_origem}') é inválido ou não definido.")
+        if run_rename:
+            if pasta_origem and os.path.isdir(pasta_origem):
+                processar_arquivos(pasta_origem)
+            else:
+                print(f"Erro: Caminho da 'pasta_origem' ('{pasta_origem}') é inválido ou não definido.")
         
-        if run_edit and pasta_edicao and os.path.isdir(pasta_edicao):
-            print(f"Pasta de edição selecionada: {pasta_edicao}")
-            editar_arquivos(pasta_edicao, constantes_empresa)
-        elif run_edit:
-            print(f"Erro: Caminho da 'pasta_edicao' ('{pasta_edicao}') é inválido ou não definido.")
+        if run_edit:
+            if pasta_edicao and os.path.isdir(pasta_edicao):
+                print(f"Pasta de edição selecionada: {pasta_edicao}")
+                editar_arquivos(pasta_edicao, constantes_empresa)
+            else:
+                print(f"Erro: Caminho da 'pasta_edicao' ('{pasta_edicao}') é inválido ou não definido.")
             
     print("\n==================== PROCESSAMENTO FINALIZADO ====================\n")

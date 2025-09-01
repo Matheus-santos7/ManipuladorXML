@@ -1,8 +1,8 @@
 {
   "ATLAS": {
     "caminhos": {
-      "pasta_origem": "/Users/apple/Documents/ManipuladorXML/Cenario 1",
-      "pasta_edicao": "/Users/apple/Documents/ManipuladorXML/Cenario 1"
+      "pasta_origem": "/Users/apple/Documents/NerusO2/XML/ATLAS/Mes09/Cenario 1",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/XML/ATLAS/Mes09/Cenario 1"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
