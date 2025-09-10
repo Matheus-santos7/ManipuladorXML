@@ -1,8 +1,8 @@
 {
   "ATLAS": {
     "caminhos": {
-      "pasta_origem": "/Users/apple/Documents/NerusO2/XML/ATLAS/Mes09/Cenario 6",
-      "pasta_edicao": "/Users/apple/Documents/NerusO2/XML/ATLAS/Mes09/Cenario 6"
+      "pasta_origem": "/Users/apple/Documents/NerusO2/XML/ATLAS/Mes09/Cenario 1",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/XML/ATLAS/Mes09/Cenario 1"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
@@ -34,7 +34,7 @@
       "pIPI": "5.00"
     },
     "data": {
-      "nova_data": "01/09/2025"
+      "nova_data": "10/09/2025"
     },
     "alterar": {
       "emitente": true,
@@ -43,7 +43,8 @@
       "data": true,
       "refNFe": true,
       "cst": true,
-      "zerar_ipi_remessa_retorno": true
+      "zerar_ipi_remessa_retorno": true,
+      "zerar_ipi_venda": false
     },
     "mapeamento_cst": {
       "6105": {
@@ -80,8 +81,8 @@
   },
   "ITATIAIA": {
     "caminhos": {
-      "pasta_origem": "/Users/apple/Documents/NerusO2/XML/ATLAS/Cenario 15",
-      "pasta_edicao": "/Users/apple/Documents/NerusO2/XML/ATLAS/Cenario 15"
+      "pasta_origem": "/Users/apple/Documents/NerusO2/XML/ITATIAIA/NovosCenarios/Cenario 4",
+      "pasta_edicao": "/Users/apple/Documents/NerusO2/XML/ITATIAIA/NovosCenarios/Cenario 4"
     },
     "configuracao_execucao": {
       "processar_e_renomear": true,
@@ -113,7 +114,7 @@
       "pIPI": "5.00"
     },
     "data": {
-      "nova_data": "27/08/2025"
+      "nova_data": "10/09/2025"
     },
     "alterar": {
       "emitente": true,
@@ -122,7 +123,8 @@
       "data": true,
       "refNFe": true,
       "cst": false,
-      "zerar_ipi_remessa_retorno": false
+      "zerar_ipi_remessa_retorno": false,
+      "zerar_ipi_venda": false
     },
     "mapeamento_cst": {
       "6105": {

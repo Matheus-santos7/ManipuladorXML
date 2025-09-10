@@ -302,6 +302,7 @@ def editar_arquivos(folder_path, constantes_empresa):
     alterar_ref_nfe = cfg.get('refNFe', False)
     alterar_cst = cfg.get('cst', False)
     zerar_ipi_remessa_retorno = cfg.get('zerar_ipi_remessa_retorno', False)
+    zerar_ipi_venda = cfg.get('zerar_ipi_venda', False)  # Nova flag
 
     novo_emitente = constantes_empresa.get('emitente')
     novo_produto = constantes_empresa.get('produto')
@@ -343,7 +344,7 @@ def editar_arquivos(folder_path, constantes_empresa):
                 msg, alteracoes = _editar_nfe(
                     root, alterar_emitente, novo_emitente, alterar_produtos, novo_produto,
                     alterar_impostos, novos_impostos, alterar_cst, mapeamento_cst,
-                    zerar_ipi_remessa_retorno, alterar_data, nova_data_str,
+                    zerar_ipi_remessa_retorno, zerar_ipi_venda, alterar_data, nova_data_str,  # Adicionada a nova flag
                     chave_mapping, alterar_ref_nfe, reference_map
                 )
 
@@ -559,7 +560,7 @@ def _editar_cancelamento(root, chave_mapping, alterar_data=False, nova_data_str=
 def _editar_nfe(
     root, alterar_emitente, novo_emitente, alterar_produtos, novo_produto,
     alterar_impostos, novos_impostos, alterar_cst, mapeamento_cst,
-    zerar_ipi_remessa_retorno, alterar_data, nova_data_str,
+    zerar_ipi_remessa_retorno, zerar_ipi_venda, alterar_data, nova_data_str,
     chave_mapping, alterar_ref_nfe, reference_map
 ):
     alteracoes = []
@@ -585,7 +586,7 @@ def _editar_nfe(
         if alterar_produtos and novo_produto and prod is not None:
             for campo, valor in novo_produto.items():
                 tag = find_element(prod, campo)
-                if tag is not None and f"Produto: <{campo}> alterado" not in alteracoes:
+                if tag is not None:
                     tag.text = valor
                     alteracoes.append(f"Produto: <{campo}> alterado")
         if imposto is None: continue
@@ -610,17 +611,25 @@ def _editar_nfe(
                             cst_tag.text = cst_valor
                             alteracoes.append(f"CST do {imposto_nome} alterado")
 
-            if zerar_ipi_remessa_retorno and cfop in REMESSAS_CFOP + RETORNOS_CFOP:
-                ipi_tag = find_element(imposto, 'IPI')
-                if ipi_tag is not None:
+            ipi_tag = find_element(imposto, 'IPI')
+            if ipi_tag is not None:
+                if zerar_ipi_remessa_retorno and cfop in REMESSAS_CFOP + RETORNOS_CFOP:
                     for tag_ipi in ['vIPI', 'vBC']:
                         tag = find_element_deep(ipi_tag, tag_ipi)
                         if tag is not None: tag.text = "0.00"
                     tag_pIPI = find_element_deep(ipi_tag, 'pIPI')
                     if tag_pIPI is not None: tag_pIPI.text = "0.0000"
                     alteracoes.append("Valores de IPI zerados para remessa/retorno")
+                
+                if zerar_ipi_venda and cfop in VENDAS_CFOP:
+                    for tag_ipi in ['vIPI', 'vBC']:
+                        tag = find_element_deep(ipi_tag, tag_ipi)
+                        if tag is not None: tag.text = "0.00"
+                    tag_pIPI = find_element_deep(ipi_tag, 'pIPI')
+                    if tag_pIPI is not None: tag_pIPI.text = "0.0000"
+                    alteracoes.append("Valores de IPI zerados para venda")
 
-    if zerar_ipi_remessa_retorno:
+    if zerar_ipi_remessa_retorno or zerar_ipi_venda:
         _recalcula_totais_ipi(inf_nfe, alteracoes)
 
     if alterar_data and nova_data_str:
